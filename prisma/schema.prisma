@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model VerifiedUser {
+  id            String   @id @default(cuid())
+  discordId     String   // Discord User-ID des verifizierten Members
+  guildId       String   // Server, auf dem verifiziert wurde (Quell-Server)
+  username      String   // zuletzt bekannter Discord-Username (nur zur Anzeige/Logging)
+
+  accessToken   String   // AES-256-GCM verschlüsselt
+  refreshToken  String   // AES-256-GCM verschlüsselt
+  expiresAt     DateTime // Ablaufzeit des aktuellen accessToken
+
+  verifiedAt    DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([discordId, guildId])
+  @@index([guildId])
+}
