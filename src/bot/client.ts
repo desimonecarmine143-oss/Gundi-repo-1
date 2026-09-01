@@ -1,6 +1,16 @@
-import { Client, GatewayIntentBits, Collection, Interaction } from "discord.js";
+import {
+  Client,
+  GatewayIntentBits,
+  Collection,
+  Interaction,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} from "discord.js";
 import * as verifyCommand from "./commands/verify";
+import * as setupVerifyCommand from "./commands/setup-verify";
 import * as migrateCommand from "./commands/migrate";
+import { buildAuthorizeUrl } from "../lib/discordOAuth";
 
 interface Command {
   data: { name: string; toJSON: () => unknown };
@@ -9,6 +19,7 @@ interface Command {
 
 const commands = new Collection<string, Command>();
 commands.set(verifyCommand.data.name, verifyCommand);
+commands.set(setupVerifyCommand.data.name, setupVerifyCommand);
 commands.set(migrateCommand.data.name, migrateCommand);
 
 export const client = new Client({
@@ -20,6 +31,23 @@ client.once("ready", () => {
 });
 
 client.on("interactionCreate", async (interaction: Interaction) => {
+  // Klick auf den dauerhaften "Verifiziere dich"-Button aus /setup-verify
+  if (interaction.isButton() && interaction.customId === "start_verify") {
+    if (!interaction.guildId) return;
+
+    const authorizeUrl = buildAuthorizeUrl(interaction.user.id, interaction.guildId);
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel("Jetzt autorisieren")
+        .setStyle(ButtonStyle.Link)
+        .setURL(authorizeUrl)
+    );
+
+    await interaction.reply({ components: [row], ephemeral: true });
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   const command = commands.get(interaction.commandName);
@@ -44,4 +72,8 @@ export function startBot() {
 
 // Wird separat ausgeführt (siehe package.json "deploy-commands"), NICHT bei
 // jedem Bot-Start, da Discord das Neu-Registrieren rate-limitet.
-export const commandsToRegister = [verifyCommand.data.toJSON(), migrateCommand.data.toJSON()];
+export const commandsToRegister = [
+  verifyCommand.data.toJSON(),
+  setupVerifyCommand.data.toJSON(),
+  migrateCommand.data.toJSON(),
+];
