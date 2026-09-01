@@ -5,6 +5,7 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  EmbedBuilder,
   TextChannel,
 } from "discord.js";
 
@@ -19,6 +20,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
+  const embed = new EmbedBuilder()
+    .setDescription("Verifiziere dich bitte um in der Gang beizutreten.")
+    .setColor(0x57f287);
+
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId("start_verify")
@@ -26,6 +31,6 @@ export async function execute(interaction: ChatInputCommandInteraction) {
       .setStyle(ButtonStyle.Success)
   );
 
-  await interaction.channel.send({ components: [row] });
+  await interaction.channel.send({ embeds: [embed], components: [row] });
   await interaction.reply({ content: "✅ Verifizierungs-Button wurde gepostet.", ephemeral: true });
 }
