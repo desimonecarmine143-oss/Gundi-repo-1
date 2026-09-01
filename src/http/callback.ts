@@ -3,6 +3,7 @@ import { exchangeCode, fetchDiscordUser } from "../lib/discordOAuth";
 import { verifyState } from "../lib/oauthState";
 import { encryptToken } from "../lib/crypto";
 import { prisma } from "../lib/prisma";
+import { addRole, removeRole } from "../lib/discordRoles";
 
 export const callbackRouter = Router();
 
@@ -55,6 +56,24 @@ callbackRouter.get("/api/auth/discord/callback", async (req: Request, res: Respo
         expiresAt,
       },
     });
+
+    // Rollen anpassen. Fehler hier werfen die Verifizierung NICHT um – der
+    // wichtige Teil (Token gespeichert, für /migrate nutzbar) ist bereits
+    // passiert. Häufigste Fehlerursache: Bot-Rolle steht in der
+    // Rollen-Reihenfolge nicht über den beiden konfigurierten Rollen.
+    try {
+      const verifiedRoleId = process.env.VERIFIED_ROLE_ID;
+      const unverifiedRoleId = process.env.UNVERIFIED_ROLE_ID;
+
+      if (verifiedRoleId) {
+        await addRole(statePayload.guildId, discordUser.id, verifiedRoleId);
+      }
+      if (unverifiedRoleId) {
+        await removeRole(statePayload.guildId, discordUser.id, unverifiedRoleId);
+      }
+    } catch (roleErr) {
+      console.error("Rollen-Vergabe fehlgeschlagen:", roleErr);
+    }
 
     return sendPage(res, 200, "✅ Verifizierung erfolgreich! Du kannst dieses Fenster jetzt schließen.");
   } catch (err) {
